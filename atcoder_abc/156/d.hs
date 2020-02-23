@@ -1,19 +1,56 @@
-import           Control.Monad
-import           Data.Array.ST
-import           Data.Array.Unboxed
+{-# LANGUAGE BangPatterns #-}
+import           Data.Int (Int64)
+
+modulus :: Int64
+modulus = 1000000007
+
+newtype IntMod = IntMod Int64 deriving Eq
+
+-- fromIntegral_Int64_IntMod :: Int64 -> IntMod
+-- fromIntegral_Int64_IntMod n = IntMod (n `mod` modulus)
+-- {-# RULES
+-- "fromIntegral/Int->IntMod"
+--     fromIntegral = fromIntegral_Int64_IntMod . (fromIntegral :: Int -> Int64)
+-- "fromIntegral/Int64->IntMod"
+--     fromIntegral = fromIntegral_Int64_IntMod
+-- #-}
+
+instance Show IntMod where
+  show (IntMod x) = show x
+
+instance Num IntMod where
+  IntMod x + IntMod y = IntMod ((x + y) `mod` modulus)
+  IntMod x - IntMod y = IntMod ((x - y) `mod` modulus)
+  IntMod x * IntMod y = IntMod ((x * y) `mod` modulus)
+  fromInteger n = IntMod (fromInteger (n `mod` fromIntegral modulus))
+  abs = undefined
+  signum = undefined
+
+powMod :: IntMod -> Int64 -> IntMod
+powMod !x 1 = x
+powMod !x !k
+  | even k = powMod (x * x) (k `div` 2)
+  | otherwise = x * powMod (x * x) (k `div` 2)
+
+invMod :: IntMod -> IntMod
+invMod 0  = error "inverse of 0"
+invMod !x = powMod x (modulus - 2)
+
+nPkMod :: Int64 -> Int64 -> IntMod
+nPkMod !n' !k' = go 1 n' k'
+  where go :: IntMod -> Int64 -> Int64 -> IntMod
+        go !a !_ 0  = a
+        go !a !n !k = go (a * fromIntegral n) (n - 1) (k - 1)
+
+nCkMod :: Int64 -> Int64 -> IntMod
+nCkMod !n !k = nPkMod n k * invMod (nPkMod k k)
 
 main :: IO ()
 main = do
-  [n,a,b] <- map read . words <$> getLine :: IO [Int]
-  let result = pascal n n
-      allsum = sum $ map (\x -> result ! (n,x)) [1..n]
-  print $ allsum - result ! (n,a+1) - result ! (n,b+1)
+  [n,a,b] <- map read . words <$> getLine :: IO [Int64]
+  let ala = powMod 2 n - 1
+      nca = nCkMod n a
+      ncb = nCkMod n b
+  print $ ala - nca - ncb
 
-pascal :: Int -> Int -> UArray (Int,Int) Int
-pascal n0 k0 = runSTUArray $ do
-  dptbl <- newArray ((0,0),(n0,k0)) 0
-  forM_ [(n',k') | n' <- [0..n0], k' <- [0..k0], n'>=k'] $ \(n,k) ->
-    if k == 0 || k == n
-    then writeArray dptbl (n,k) 1
-    else liftM2 (+) (readArray dptbl (n-1,k-1)) (readArray dptbl (n-1,k)) >>= writeArray dptbl (n,k)
-  return dptbl
+-- 1000000000 141421 173205
