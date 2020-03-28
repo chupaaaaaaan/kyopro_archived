@@ -10,6 +10,7 @@ import           Data.Bits
 import           Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import           Data.Char
+import           Data.Graph
 import           Data.Int              (Int64)
 import           Data.List
 import           Data.Maybe
@@ -51,6 +52,11 @@ getAsCharArray1DWithLength = BS.getLine >>= \cs ->
   let n = BS.length cs
       ary = (U.listArray (1,n) $ unfoldr BS.uncons cs) :: UArray Int Char
   in return (n, ary)
+
+-- n: number of lines
+-- m: number of chars per a line
+getAsCharArray2D :: Int -> Int -> IO (UArray (Int,Int) Char)
+getAsCharArray2D n m = U.listArray ((1,1),(n,m)) . unfoldr BS.uncons . BS.concat <$> replicateM n BS.getLine
 
 main :: IO ()
 main = do
